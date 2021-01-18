@@ -1,5 +1,4 @@
 const BASE_URL = "https://hack-or-snooze-v3.herokuapp.com";
-
 /**
  * This class maintains the list of individual Story instances
  *  It also has some methods for fetching, adding, and removing stories
@@ -22,7 +21,6 @@ class StoryList {
   // TODO: Note the presence of `static` keyword: this indicates that getStories
   // is **not** an instance method. Rather, it is a method that is called on the
   // class directly. Why doesn't it make sense for getStories to be an instance method?
-
   static async getStories() {
     // query the /stories endpoint (no auth required)
     const response = await axios.get(`${BASE_URL}/stories`);
@@ -42,7 +40,6 @@ class StoryList {
    *
    * Returns the new story object
    */
-
   async addStory(user, newStory) {
     const response = await axios.post(`${BASE_URL}/stories`, {
       token: user.loginToken,
@@ -57,7 +54,6 @@ class StoryList {
  * The User class to primarily represent the current user.
  *  There are helper methods to signup (create), login, and getLoggedInUser
  */
-
 class User {
   constructor(userObj) {
     this.username = userObj.username;
@@ -79,7 +75,6 @@ class User {
    * - password: a new password
    * - name: the user's full name
    */
-
   static async create(username, password, name) {
     const response = await axios.post(`${BASE_URL}/signup`, {
       user: {
@@ -103,7 +98,6 @@ class User {
    * - username: an existing user's username
    * - password: an existing user's password
    */
-
   static async login(username, password) {
     const response = await axios.post(`${BASE_URL}/login`, {
       user: {
@@ -130,7 +124,6 @@ class User {
    * This function uses the token & username to make an API request to get details
    *   about the user. Then it creates an instance of user with that info.
    */
-
   static async getLoggedInUser(token, username) {
     // if we don't have user info, return null
     if (!token || !username) return null;
@@ -169,12 +162,24 @@ class User {
 
     }
   }
+
+  async deleteOwnStory(storyNum) {
+    let story = this.ownStories.find(({ storyId }) => storyId === storyNum);
+    if (story) {
+      const response = await axios.delete(`${BASE_URL}/stories/${storyNum}`, {
+        data: {
+          token: this.loginToken
+        }
+      });
+      // this.ownStories.splice(this.ownStories.indexOf(story), 1);
+
+    }
+  }
 }
 
 /**
  * Class to represent a single story.
  */
-
 class Story {
 
   /**

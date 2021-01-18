@@ -103,18 +103,16 @@ $(async function () {
    * Event handler for Clicking User Profile
    */
   $navProfile.on('click', function () {
+    hideElements();
     $('#profile-name').text(currentUser.name);
     $('#profile-username').text(currentUser.username);
     $('#profile-account-date').text(currentUser.createdAt);
-    $allStoriesList.toggle();
-    $submitForm.hide();
-    $userProfile.toggle();
+    $userProfile.show();
   });
 
   /**
    * Event handler for Navigation to Homepage
    */
-
   $("body").on("click", "#nav-all", async function () {
     hideElements();
     await generateStories();
@@ -125,19 +123,47 @@ $(async function () {
    * Event handler for toggling Submit Form
    */
   $('#nav-submit').on('click', function () {
+    hideElements();
     $submitForm.slideToggle();
-    $userProfile.hide();
     $allStoriesList.show();
+  });
+
+
+  /**
+   * Event handler for showing My Favorite stories
+   */
+  $('#nav-favorites').on('click', function () {
+    hideElements();
+    generateFavorites();
+    $favoritedArticles.show();
+  });
+
+  /**
+   * Event handler for showing My Own stories
+   */
+  $('#nav-stories').on('click', function () {
+    hideElements();
+    generateOwnStories();
+    $ownStories.show();
   });
 
   /**
    * Event listener for starring a favorite
    */
-  $('.articles-container').on('click', 'i', async function (evt) {
+  $('.articles-container').on('click', 'i.star', async function (evt) {
     $(evt.target).toggleClass(['far', 'fas']);
     await currentUser.toggleStoryFavorite($(evt.target).parent().attr('id'));
+    generateFavorites();
   });
 
+  /**
+   * Event listener for deleting own story
+   */
+  $('.articles-container').on('click', 'i.trash-can', async function (evt) {
+    await currentUser.deleteOwnStory($(evt.target).parent().attr('id'));
+    //$(evt.target).parent().remove();
+    generateOwnStories();
+  });
 
   /**
    * On page load, checks local storage to see if the user is already logged in.
@@ -172,6 +198,7 @@ $(async function () {
     $createAccountForm.trigger("reset");
 
     // show the stories
+    generateStories();
     $allStoriesList.show();
 
     // update the navigation bar
@@ -198,17 +225,57 @@ $(async function () {
   }
 
   /**
+   * A rendering function to show Favorite stories
+   */
+  function generateFavorites() {
+    // empty favorites
+    $favoritedArticles.empty();
+
+    if (currentUser.favorites.length > 0) {
+      for (let story of currentUser.favorites) {
+        const result = generateStoryHTML(story);
+        $favoritedArticles.append(result);
+      }
+    } else {
+      $favoritedArticles.addClass('articles-list').text('No favorites added!');
+    }
+  }
+
+  /**
+   * A rendering function to show Favorite stories
+   */
+  function generateOwnStories() {
+    // empty favorites
+    $ownStories.empty();
+
+    if (currentUser.ownStories.length > 0) {
+      let trash = `<i class="trash-can fas fa-trash-alt"></i>`;
+      for (let story of currentUser.ownStories) {
+        const result = generateStoryHTML(story);
+        $ownStories.append(result);
+      }
+      $('i').before(trash);
+    } else {
+      $ownStories.addClass('articles-list').text('No stories added by user yet!');
+    }
+  }
+
+  /**
    * A function to render HTML for an individual Story instance
    */
-
   function generateStoryHTML(story) {
     let hostName = getHostName(story.url);
+    let star = "";
 
-    let icon = currentUser.favorites.find((val) => val.storyId === story.storyId) != undefined ? "fas" : "far";
+    // set star icon
+    if (currentUser != null) {
+      star = currentUser.favorites.find((val) => val.storyId === story.storyId) != undefined ?
+        `<i class="star fas fa-star"></i>` : `<i class="star far fa-star"></i>`;
+    }
     // render story markup
     const storyMarkup = $(`
       <li id="${story.storyId}">
-        <i class="${icon} fa-star"></i>
+        ${star}
         <a class="article-link" href="${story.url}" target="a_blank">
           <strong>${story.title}</strong>
         </a>

@@ -1,13 +1,18 @@
-$(async function() {
+$(async function () {
   // cache some selectors we'll be using quite a bit
   const $allStoriesList = $("#all-articles-list");
   const $submitForm = $("#submit-form");
+  const $favoritedArticles = $("#favorited-articles");
   const $filteredArticles = $("#filtered-articles");
   const $loginForm = $("#login-form");
   const $createAccountForm = $("#create-account-form");
   const $ownStories = $("#my-articles");
+  const $userProfile = $('#user-profile');
+  const $navLinks = $('#main-nav-links');
   const $navLogin = $("#nav-login");
   const $navLogOut = $("#nav-logout");
+  const $navProfile = $('#nav-user-profile');
+
 
   // global storyList variable
   let storyList = null;
@@ -18,11 +23,10 @@ $(async function() {
   await checkIfLoggedIn();
 
   /**
-   * Event listener for logging in.
-   *  If successfully we will setup the user instance
-   */
-
-  $loginForm.on("submit", async function(evt) {
+  * Event listener for logging in.
+  *  If successfully we will setup the user instance
+  */
+  $loginForm.on("submit", async function (evt) {
     evt.preventDefault(); // no page-refresh on submit
 
     // grab the username and password
@@ -41,8 +45,7 @@ $(async function() {
    * Event listener for signing up.
    *  If successfully we will setup a new user instance
    */
-
-  $createAccountForm.on("submit", async function(evt) {
+  $createAccountForm.on("submit", async function (evt) {
     evt.preventDefault(); // no page refresh
 
     // grab the required fields
@@ -57,11 +60,27 @@ $(async function() {
     loginAndSubmitForm();
   });
 
-  /**
-   * Log Out Functionality
-   */
+  $submitForm.on('submit', async function (evt) {
+    evt.preventDefault();
+    // create new story
+    const story = await storyList.addStory(currentUser, {
+      author: $('#author').val(),
+      title: $('#title').val(),
+      url: $('#url').val()
+    });
 
-  $navLogOut.on("click", function() {
+    // prepend to story list (or can just call generateStories to refresh)
+    const result = generateStoryHTML(story);
+    $allStoriesList.prepend(result);
+    // hide submit form and reset it
+    $submitForm.slideToggle();
+    $submitForm.trigger('reset');
+  })
+
+  /**
+  * Log Out Functionality
+  */
+  $navLogOut.on("click", function () {
     // empty out local storage
     localStorage.clear();
     // refresh the page, clearing memory
@@ -69,10 +88,9 @@ $(async function() {
   });
 
   /**
-   * Event Handler for Clicking Login
-   */
-
-  $navLogin.on("click", function() {
+  * Event Handler for Clicking Login
+  */
+  $navLogin.on("click", function () {
     // Show the Login and Create Account Forms
     $loginForm.slideToggle();
     $createAccountForm.slideToggle();
@@ -80,12 +98,30 @@ $(async function() {
   });
 
   /**
+  * Event handler for Clicking User Profile
+  */
+  $navProfile.on('click', function () {
+    $('#profile-name').text(currentUser.name);
+    $('#profile-username').text(currentUser.username);
+    $('#profile-account-date').text(currentUser.createdAt);
+    $allStoriesList.toggle();
+    $submitForm.hide();
+    $userProfile.toggle();
+  });
+
+  /**
    * Event handler for Navigation to Homepage
    */
 
-  $("body").on("click", "#nav-all", async function() {
+  $("body").on("click", "#nav-all", async function () {
     hideElements();
     await generateStories();
+    $allStoriesList.show();
+  });
+
+  $('#nav-submit').on('click', function () {
+    $submitForm.slideToggle();
+    $userProfile.hide();
     $allStoriesList.show();
   });
 
@@ -93,7 +129,6 @@ $(async function() {
    * On page load, checks local storage to see if the user is already logged in.
    * Renders page information accordingly.
    */
-
   async function checkIfLoggedIn() {
     // let's see if we're logged in
     const token = localStorage.getItem("token");
@@ -113,7 +148,6 @@ $(async function() {
   /**
    * A rendering function to run to reset the forms and hide the login info
    */
-
   function loginAndSubmitForm() {
     // hide the forms for logging in and signing up
     $loginForm.hide();
@@ -134,7 +168,6 @@ $(async function() {
    * A rendering function to call the StoryList.getStories static method,
    *  which will generate a storyListInstance. Then render it.
    */
-
   async function generateStories() {
     // get an instance of StoryList
     const storyListInstance = await StoryList.getStories();
@@ -160,11 +193,12 @@ $(async function() {
     // render story markup
     const storyMarkup = $(`
       <li id="${story.storyId}">
+        <i class="far fa-star"></i>
         <a class="article-link" href="${story.url}" target="a_blank">
           <strong>${story.title}</strong>
         </a>
-        <small class="article-author">by ${story.author}</small>
         <small class="article-hostname ${hostName}">(${hostName})</small>
+        <small class="article-author">by ${story.author}</small>
         <small class="article-username">posted by ${story.username}</small>
       </li>
     `);
@@ -173,15 +207,16 @@ $(async function() {
   }
 
   /* hide all elements in elementsArr */
-
   function hideElements() {
     const elementsArr = [
       $submitForm,
       $allStoriesList,
+      $favoritedArticles,
       $filteredArticles,
       $ownStories,
       $loginForm,
-      $createAccountForm
+      $createAccountForm,
+      $userProfile
     ];
     elementsArr.forEach($elem => $elem.hide());
   }
@@ -189,10 +224,12 @@ $(async function() {
   function showNavForLoggedInUser() {
     $navLogin.hide();
     $navLogOut.show();
+    $navLinks.show();
+    $navProfile.text(currentUser.username);
+    $navProfile.show();
   }
 
   /* simple function to pull the hostname from a URL */
-
   function getHostName(url) {
     let hostName;
     if (url.indexOf("://") > -1) {
@@ -207,7 +244,6 @@ $(async function() {
   }
 
   /* sync current user information to localStorage */
-
   function syncCurrentUserToLocalStorage() {
     if (currentUser) {
       localStorage.setItem("token", currentUser.loginToken);

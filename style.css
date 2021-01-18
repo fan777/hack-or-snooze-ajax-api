@@ -45,13 +45,13 @@ nav {
   border-radius: 3px 3px 0 0;
 }
 
-.main-nav-links {
-  margin: 0 15px;
+#main-nav-links {
+  margin: 0 10px;
 }
 
 .nav-link {
   font-size: 0.85rem;
-  margin: 0 3px;
+  margin: 2px 3px;
 }
 
 .nav-right {

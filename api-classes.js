@@ -44,9 +44,6 @@ class StoryList {
    */
 
   async addStory(user, newStory) {
-    // TODO - Implement this functions!
-    // this function should return the newly created story so it can be used in
-    // the script.js file where it will be appended to the DOM
     const response = await axios.post(`${BASE_URL}/stories`, {
       token: user.loginToken,
       story: newStory
@@ -157,9 +154,21 @@ class User {
     return existingUser;
   }
 
-  // async toggleStoryFavorite(story) {
-  //   this.favorites.find()
-  // }
+  async toggleStoryFavorite(storyNum) {
+    let story = this.favorites.find(({ storyId }) => storyId === storyNum);
+    if (story) {
+      const response = await axios.delete(`${BASE_URL}/users/${this.username}/favorites/${storyNum}`, {
+        data: {
+          token: this.loginToken
+        }
+      });
+      this.favorites = response.data.user.favorites.map(s => new Story(s));
+    } else {
+      const response = await axios.post(`${BASE_URL}/users/${this.username}/favorites/${storyNum}`, { token: this.loginToken });
+      this.favorites = response.data.user.favorites.map(s => new Story(s));
+
+    }
+  }
 }
 
 /**
@@ -172,7 +181,6 @@ class Story {
    * The constructor is designed to take an object for better readability / flexibility
    * - storyObj: an object that has story properties in it
    */
-
   constructor(storyObj) {
     this.author = storyObj.author;
     this.title = storyObj.title;

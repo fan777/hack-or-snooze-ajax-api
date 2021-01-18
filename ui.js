@@ -1,3 +1,9 @@
+// global storyList variable
+let storyList = null;
+
+// global currentUser variable
+let currentUser = null;
+
 $(async function () {
   // cache some selectors we'll be using quite a bit
   const $allStoriesList = $("#all-articles-list");
@@ -13,19 +19,12 @@ $(async function () {
   const $navLogOut = $("#nav-logout");
   const $navProfile = $('#nav-user-profile');
 
-
-  // global storyList variable
-  let storyList = null;
-
-  // global currentUser variable
-  let currentUser = null;
-
   await checkIfLoggedIn();
 
   /**
-  * Event listener for logging in.
-  *  If successfully we will setup the user instance
-  */
+   * Event listener for logging in.
+   *  If successfully we will setup the user instance
+   */
   $loginForm.on("submit", async function (evt) {
     evt.preventDefault(); // no page-refresh on submit
 
@@ -60,18 +59,21 @@ $(async function () {
     loginAndSubmitForm();
   });
 
+  /**
+   * Event listener for submitting new story
+   */
   $submitForm.on('submit', async function (evt) {
     evt.preventDefault();
+
     // create new story
-    const story = await storyList.addStory(currentUser, {
+    await storyList.addStory(currentUser, {
       author: $('#author').val(),
       title: $('#title').val(),
       url: $('#url').val()
     });
 
-    // prepend to story list (or can just call generateStories to refresh)
-    const result = generateStoryHTML(story);
-    $allStoriesList.prepend(result);
+    // add story to DOM
+    await generateStories();
     // hide submit form and reset it
     $submitForm.slideToggle();
     $submitForm.trigger('reset');
@@ -88,8 +90,8 @@ $(async function () {
   });
 
   /**
-  * Event Handler for Clicking Login
-  */
+   * Event handler for Clicking Login
+   */
   $navLogin.on("click", function () {
     // Show the Login and Create Account Forms
     $loginForm.slideToggle();
@@ -98,8 +100,8 @@ $(async function () {
   });
 
   /**
-  * Event handler for Clicking User Profile
-  */
+   * Event handler for Clicking User Profile
+   */
   $navProfile.on('click', function () {
     $('#profile-name').text(currentUser.name);
     $('#profile-username').text(currentUser.username);
@@ -119,11 +121,23 @@ $(async function () {
     $allStoriesList.show();
   });
 
+  /**
+   * Event handler for toggling Submit Form
+   */
   $('#nav-submit').on('click', function () {
     $submitForm.slideToggle();
     $userProfile.hide();
     $allStoriesList.show();
   });
+
+  /**
+   * Event listener for starring a favorite
+   */
+  $('.articles-container').on('click', 'i', async function (evt) {
+    $(evt.target).toggleClass(['far', 'fas']);
+    await currentUser.toggleStoryFavorite($(evt.target).parent().attr('id'));
+  });
+
 
   /**
    * On page load, checks local storage to see if the user is already logged in.
@@ -190,10 +204,11 @@ $(async function () {
   function generateStoryHTML(story) {
     let hostName = getHostName(story.url);
 
+    let icon = currentUser.favorites.find((val) => val.storyId === story.storyId) != undefined ? "fas" : "far";
     // render story markup
     const storyMarkup = $(`
       <li id="${story.storyId}">
-        <i class="far fa-star"></i>
+        <i class="${icon} fa-star"></i>
         <a class="article-link" href="${story.url}" target="a_blank">
           <strong>${story.title}</strong>
         </a>
@@ -204,6 +219,13 @@ $(async function () {
     `);
 
     return storyMarkup;
+  }
+
+  function showNavForLoggedInUser() {
+    $navLogin.hide();
+    $navLogOut.show();
+    $navLinks.show();
+    $navProfile.text(currentUser.username).show();
   }
 
   /* hide all elements in elementsArr */
@@ -219,14 +241,6 @@ $(async function () {
       $userProfile
     ];
     elementsArr.forEach($elem => $elem.hide());
-  }
-
-  function showNavForLoggedInUser() {
-    $navLogin.hide();
-    $navLogOut.show();
-    $navLinks.show();
-    $navProfile.text(currentUser.username);
-    $navProfile.show();
   }
 
   /* simple function to pull the hostname from a URL */

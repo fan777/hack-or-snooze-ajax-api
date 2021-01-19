@@ -165,12 +165,19 @@ $(async function () {
     const username = $("#login-username").val();
     const password = $("#login-password").val();
 
-    // call the login static method to build a user instance
-    const userInstance = await User.login(username, password);
-    // set the global user to the user instance
-    currentUser = userInstance;
-    syncCurrentUserToLocalStorage();
-    loginAndSubmitForm();
+    try {
+      // call the login static method to build a user instance
+      const userInstance = await User.login(username, password);
+      // set the global user to the user instance
+      currentUser = userInstance;
+      syncCurrentUserToLocalStorage();
+      loginAndSubmitForm();
+    } catch (err) {
+      $('#login-alert').text(err);
+      $('#login-alert').removeClass('d-none');
+      window.setTimeout(() => $('#login-alert').addClass('d-none'), 3000)
+    }
+
   });
 
   /**
@@ -184,11 +191,19 @@ $(async function () {
     let username = $("#create-account-username").val();
     let password = $("#create-account-password").val();
 
-    // call the create method, which calls the API and then builds a new user instance
-    const newUser = await User.create(username, password, name);
-    currentUser = newUser;
-    syncCurrentUserToLocalStorage();
-    loginAndSubmitForm();
+    try {
+      // call the create method, which calls the API and then builds a new user instance
+      const newUser = await User.create(username, password, name);
+      currentUser = newUser;
+      syncCurrentUserToLocalStorage();
+      loginAndSubmitForm();
+    } catch (err) {
+      $('#signup-alert').text(err);
+      $('#signup-alert').removeClass('d-none');
+      window.setTimeout(() => $('#signup-alert').addClass('d-none'), 3000)
+    }
+
+
   });
 
   /** 

@@ -5,27 +5,160 @@ let storyList = null;
 let currentUser = null;
 
 $(async function () {
-  // cache some selectors we'll be using quite a bit
+
+  // section elements
+  const $newArticle = $('#new-article');
   const $allStoriesList = $("#all-articles-list");
-  const $submitForm = $("#submit-form");
   const $favoritedArticles = $("#favorited-articles");
-  const $filteredArticles = $("#filtered-articles");
-  const $loginForm = $("#login-form");
-  const $createAccountForm = $("#create-account-form");
-  const $ownStories = $("#my-articles");
+  const $myOwnArticles = $("#my-articles");
+  const $editArticle = $('#edit-article');
+  const $userSignup = $('#user-signup');
   const $userProfile = $('#user-profile');
-  const $navLinks = $('#main-nav-links');
+
+  // form elements
+  const $frmSubmit = $("#submit-form");
+  const $frmEdit = $('#edit-article-form');
+  const $frmLogin = $("#login-form");
+  const $frmCreateAccount = $("#create-account-form");
+
+  // navigation elements
+  const $navLinks = $('#nav-links');
+  const $navSubmit = $('#nav-submit');
+  const $navFavorites = $('#nav-favorites');
+  const $navOwnStories = $('#nav-stories');
   const $navLogin = $("#nav-login");
+  const $navSignup = $('#nav-signup');
+  const $navProfile = $('#nav-profile');
   const $navLogOut = $("#nav-logout");
-  const $navProfile = $('#nav-user-profile');
 
   await checkIfLoggedIn();
 
   /**
-   * Event listener for logging in.
-   *  If successfully we will setup the user instance
+   * Event handler for clicking main homepage nav link
    */
-  $loginForm.on("submit", async function (evt) {
+  $("body").on("click", "#nav-all", async function () {
+    hideElements();
+    await generateStories();
+    $allStoriesList.removeClass('d-none');
+  });
+
+  /** 
+   * Event handler for clicking submit nav link 
+   */
+  $navSubmit.on('click', function () {
+    $favoritedArticles.addClass('d-none');
+    $myOwnArticles.addClass('d-none');
+    $userSignup.addClass('d-none');
+    $userProfile.addClass('d-none');
+
+    $allStoriesList.removeClass('d-none');
+    $newArticle.toggleClass('d-none');
+  });
+
+  /** 
+   * Event handler for clicking favorites nav link
+   */
+  $navFavorites.on('click', function () {
+    hideElements();
+    if (currentUser.favorites.length > 0) {
+      generateStoriesForSection($favoritedArticles, currentUser.favorites);
+    } else {
+      $favoritedArticles.text('No favorites added!');
+    }
+    $favoritedArticles.removeClass('d-none');
+  })
+
+  /** 
+  * Event handler for clicking my stories nav link
+  */
+  $navOwnStories.on('click', function () {
+    hideElements();
+    if (currentUser.ownStories.length > 0) {
+      generateStoriesForSection($myOwnArticles, currentUser.ownStories);
+      $('i.trash').removeClass('d-none');
+      $('i.pencil').removeClass('d-none');
+    } else {
+      $myOwnArticles.text('No stories added by user yet!');
+    }
+    $myOwnArticles.removeClass('d-none');
+  })
+
+  /** 
+   * Event handler for clicking signup nav link 
+   */
+  $navSignup.on("click", function () {
+    hideElements();
+    $userSignup.removeClass('d-none');
+  });
+
+  /**
+   * Event handler for clicking user profile nav link
+   */
+  $navProfile.on('click', function () {
+    hideElements();
+    $('#profile-name').text(currentUser.name);
+    $('#profile-username').text(currentUser.username);
+    $('#profile-account-date').text(currentUser.createdAt);
+    $userProfile.removeClass('d-none');
+  });
+
+  /**
+   * Event handler for clicking logout nav link
+   */
+  $navLogOut.on("click", function () {
+    // empty out local storage
+    localStorage.clear();
+    // refresh the page, clearing memory
+    location.reload();
+  });
+
+  /** 
+   * Event listener for submitting new story
+   */
+  $frmSubmit.on('submit', async function (evt) {
+    evt.preventDefault();
+
+    // create new story
+    let story = await storyList.addStory(currentUser, {
+      author: $('#author').val(),
+      title: $('#title').val(),
+      url: $('#url').val()
+    });
+    currentUser.addOwnStory(story);
+
+    // add story to DOM
+    await generateStories();
+    // hide submit form and reset it
+    $newArticle.addClass('d-none');
+    $frmSubmit.trigger('reset');
+    // show stories
+    $allStoriesList.removeClass('d-none');
+  });
+
+  /**
+   * Event listener for submitting edit
+   */
+  $frmEdit.on('submit', async function (evt) {
+    evt.preventDefault();
+    let story = await storyList.updateStory(currentUser, $editArticle.data('storyId'), {
+      author: $('#edit-author').val(),
+      title: $('#edit-title').val(),
+      url: $('edit-url').val()
+    });
+    currentUser.updateOwnStory(story);
+    // add story to DOM
+    await generateStories();
+    // hide submit form and reset it
+    $editArticle.addClass('d-none');
+    $frmEdit.trigger('reset');
+    // show stories
+    $navOwnStories.trigger('click');
+  })
+
+  /**
+   * Event listener for submitting login
+   */
+  $frmLogin.on("submit", async function (evt) {
     evt.preventDefault(); // no page-refresh on submit
 
     // grab the username and password
@@ -41,10 +174,9 @@ $(async function () {
   });
 
   /**
-   * Event listener for signing up.
-   *  If successfully we will setup a new user instance
+   * Event listener for submitting sign up
    */
-  $createAccountForm.on("submit", async function (evt) {
+  $frmCreateAccount.on("submit", async function (evt) {
     evt.preventDefault(); // no page refresh
 
     // grab the required fields
@@ -59,111 +191,55 @@ $(async function () {
     loginAndSubmitForm();
   });
 
-  /**
-   * Event listener for submitting new story
+  /** 
+   * Event listener for clicking on star
    */
-  $submitForm.on('submit', async function (evt) {
-    evt.preventDefault();
-
-    // create new story
-    await storyList.addStory(currentUser, {
-      author: $('#author').val(),
-      title: $('#title').val(),
-      url: $('#url').val()
-    });
-
-    // add story to DOM
-    await generateStories();
-    // hide submit form and reset it
-    $submitForm.slideToggle();
-    $submitForm.trigger('reset');
+  $('#articles').on('click', 'i.star', async function (evt) {
+    $(evt.target).toggleClass(['bi-star', 'bi-star-fill']);
+    await currentUser.toggleStoryFavorite($(evt.target).parent().attr('id'));
   })
 
   /**
-  * Log Out Functionality
-  */
-  $navLogOut.on("click", function () {
-    // empty out local storage
-    localStorage.clear();
-    // refresh the page, clearing memory
-    location.reload();
-  });
-
-  /**
-   * Event handler for Clicking Login
+   * Event listener for clicking on trash can
    */
-  $navLogin.on("click", function () {
-    // Show the Login and Create Account Forms
-    $loginForm.slideToggle();
-    $createAccountForm.slideToggle();
-    $allStoriesList.toggle();
-  });
-
-  /**
-   * Event handler for Clicking User Profile
-   */
-  $navProfile.on('click', function () {
-    hideElements();
-    $('#profile-name').text(currentUser.name);
-    $('#profile-username').text(currentUser.username);
-    $('#profile-account-date').text(currentUser.createdAt);
-    $userProfile.show();
-  });
-
-  /**
-   * Event handler for Navigation to Homepage
-   */
-  $("body").on("click", "#nav-all", async function () {
-    hideElements();
+  $('#articles').on('click', 'i.trash', async function (evt) {
+    // delete story
+    let story = await storyList.deleteStory(currentUser, $(evt.target).parent().attr('id'));
+    currentUser.deleteOwnStory(story);
+    // update DOM
     await generateStories();
-    $allStoriesList.show();
-  });
+    $(evt.target).parent().remove();
+  })
+
+  /** 
+   * Event listener for clicking on pencil
+   */
+  $('#articles').on('click', 'i.pencil', async function (evt) {
+    let story = currentUser.ownStories.find(({ storyId }) => storyId === $(evt.target).parent().attr('id'));
+    $('#edit-author').val(story.author);
+    $('#edit-title').val(story.title);
+    $('#edit-url').val(story.url);
+    $editArticle.data('storyId', story.storyId);
+    $editArticle.removeClass('d-none');
+  })
 
   /**
-   * Event handler for toggling Submit Form
+   * A rendering function to reset the forms and hide the login info
    */
-  $('#nav-submit').on('click', function () {
-    hideElements();
-    $submitForm.slideToggle();
-    $allStoriesList.show();
-  });
+  function loginAndSubmitForm() {
+    $userSignup.addClass('d-none');
 
+    // reset those forms
+    $frmLogin.trigger("reset");
+    $frmCreateAccount.trigger("reset");
 
-  /**
-   * Event handler for showing My Favorite stories
-   */
-  $('#nav-favorites').on('click', function () {
-    hideElements();
-    generateFavorites();
-    $favoritedArticles.show();
-  });
+    // show the stories
+    generateStories();
+    $allStoriesList.removeClass('d-none');
 
-  /**
-   * Event handler for showing My Own stories
-   */
-  $('#nav-stories').on('click', function () {
-    hideElements();
-    generateOwnStories();
-    $ownStories.show();
-  });
-
-  /**
-   * Event listener for starring a favorite
-   */
-  $('.articles-container').on('click', 'i.star', async function (evt) {
-    $(evt.target).toggleClass(['far', 'fas']);
-    await currentUser.toggleStoryFavorite($(evt.target).parent().attr('id'));
-    generateFavorites();
-  });
-
-  /**
-   * Event listener for deleting own story
-   */
-  $('.articles-container').on('click', 'i.trash-can', async function (evt) {
-    await currentUser.deleteOwnStory($(evt.target).parent().attr('id'));
-    //$(evt.target).parent().remove();
-    generateOwnStories();
-  });
+    // update the navigation bar
+    showNavForLoggedInUser();
+  }
 
   /**
    * On page load, checks local storage to see if the user is already logged in.
@@ -179,6 +255,7 @@ $(async function () {
     //  this is designed to run once, on page load
     currentUser = await User.getLoggedInUser(token, username);
     await generateStories();
+    $allStoriesList.removeClass('d-none');
 
     if (currentUser) {
       showNavForLoggedInUser();
@@ -186,77 +263,28 @@ $(async function () {
   }
 
   /**
-   * A rendering function to run to reset the forms and hide the login info
-   */
-  function loginAndSubmitForm() {
-    // hide the forms for logging in and signing up
-    $loginForm.hide();
-    $createAccountForm.hide();
-
-    // reset those forms
-    $loginForm.trigger("reset");
-    $createAccountForm.trigger("reset");
-
-    // show the stories
-    generateStories();
-    $allStoriesList.show();
-
-    // update the navigation bar
-    showNavForLoggedInUser();
-  }
-
-  /**
    * A rendering function to call the StoryList.getStories static method,
-   *  which will generate a storyListInstance. Then render it.
+   * which will generate a storyListInstance. Then render it.
    */
   async function generateStories() {
     // get an instance of StoryList
     const storyListInstance = await StoryList.getStories();
     // update our global variable
     storyList = storyListInstance;
+    // generate stories
+    generateStoriesForSection($allStoriesList, storyList.stories)
+  }
+
+  /** 
+   * Helper function to generate stories for specific sections
+   */
+  function generateStoriesForSection(section, stories) {
     // empty out that part of the page
-    $allStoriesList.empty();
-
+    section.empty();
     // loop through all of our stories and generate HTML for them
-    for (let story of storyList.stories) {
+    for (let story of stories) {
       const result = generateStoryHTML(story);
-      $allStoriesList.append(result);
-    }
-  }
-
-  /**
-   * A rendering function to show Favorite stories
-   */
-  function generateFavorites() {
-    // empty favorites
-    $favoritedArticles.empty();
-
-    if (currentUser.favorites.length > 0) {
-      for (let story of currentUser.favorites) {
-        const result = generateStoryHTML(story);
-        $favoritedArticles.append(result);
-      }
-    } else {
-      $favoritedArticles.addClass('articles-list').text('No favorites added!');
-    }
-  }
-
-  /**
-   * A rendering function to show Favorite stories
-   */
-  function generateOwnStories() {
-    // empty favorites
-    $ownStories.empty();
-
-    if (currentUser.ownStories.length > 0) {
-      let trash = `<i class="trash-can fas fa-trash-alt"></i>`;
-      for (let story of currentUser.ownStories) {
-        const result = generateStoryHTML(story);
-        $ownStories.append(result);
-      }
-      $('i').before(trash);
-    } else {
-      $ownStories.addClass('articles-list').text('No stories added by user yet!');
+      section.append(result);
     }
   }
 
@@ -265,17 +293,22 @@ $(async function () {
    */
   function generateStoryHTML(story) {
     let hostName = getHostName(story.url);
-    let star = "";
+    let favorite = "";
+    let ownStory = "";
 
     // set star icon
     if (currentUser != null) {
-      star = currentUser.favorites.find((val) => val.storyId === story.storyId) != undefined ?
-        `<i class="star fas fa-star"></i>` : `<i class="star far fa-star"></i>`;
+      favorite = currentUser.favorites.find((val) => val.storyId === story.storyId) != undefined ? `<i class="star bi bi-star-fill"></i>` : `<i class="star bi bi-star"></i>`;
     }
+
+    if (currentUser != null) {
+      ownStory = currentUser.ownStories.find((val) => val.storyId === story.storyId) != undefined ? `<i class="trash bi bi-trash-fill d-none"></i> <i class="pencil bi bi-pencil-fill d-none"></i>` : "";
+    }
+
     // render story markup
     const storyMarkup = $(`
-      <li id="${story.storyId}">
-        ${star}
+      <li class="list-group-item" id="${story.storyId}">
+        ${favorite} ${ownStory}
         <a class="article-link" href="${story.url}" target="a_blank">
           <strong>${story.title}</strong>
         </a>
@@ -289,25 +322,26 @@ $(async function () {
   }
 
   function showNavForLoggedInUser() {
-    $navLogin.hide();
-    $navLogOut.show();
-    $navLinks.show();
-    $navProfile.text(currentUser.username).show();
+    $navLogin.addClass('d-none');
+    $navLinks.removeClass('d-none');
+    $navProfile.text(currentUser.username).removeClass('d-none');
+    $navLogOut.removeClass('d-none');
   }
 
   /* hide all elements in elementsArr */
   function hideElements() {
     const elementsArr = [
-      $submitForm,
+      $newArticle,
       $allStoriesList,
       $favoritedArticles,
-      $filteredArticles,
-      $ownStories,
-      $loginForm,
-      $createAccountForm,
+      $myOwnArticles,
+      $editArticle,
+      $userSignup,
       $userProfile
     ];
-    elementsArr.forEach($elem => $elem.hide());
+    elementsArr.forEach($elem => $elem.addClass('d-none'));
+    $('i.trash').addClass('d-none');
+    $('i.pencil').addClass('d-none');
   }
 
   /* simple function to pull the hostname from a URL */
@@ -331,4 +365,5 @@ $(async function () {
       localStorage.setItem("username", currentUser.username);
     }
   }
+
 });

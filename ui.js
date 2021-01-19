@@ -20,6 +20,7 @@ $(async function () {
   const $frmEdit = $('#edit-article-form');
   const $frmLogin = $("#login-form");
   const $frmCreateAccount = $("#create-account-form");
+  const $frmUpdateProfile = $("#user-profile-form");
 
   // navigation elements
   const $navLinks = $('#nav-links');
@@ -96,9 +97,10 @@ $(async function () {
    */
   $navProfile.on('click', function () {
     hideElements();
-    $('#profile-name').text(currentUser.name);
-    $('#profile-username').text(currentUser.username);
-    $('#profile-account-date').text(currentUser.createdAt);
+    $('#profile-name').val(currentUser.name);
+    $('#profile-username').val(currentUser.username);
+    //$('#profile-password').val();
+    $('#profile-account-date').val(currentUser.createdAt);
     $userProfile.removeClass('d-none');
   });
 
@@ -203,6 +205,32 @@ $(async function () {
       window.setTimeout(() => $('#signup-alert').addClass('d-none'), 3000)
     }
 
+
+  });
+
+  /**
+   * Event listener for updating user profile
+   */
+  $frmUpdateProfile.on('submit', async function (evt) {
+    evt.preventDefault();
+
+    let name = $('#profile-name').val();
+    //let password = $('#profile-passowrd').val();
+    try {
+      const user = await currentUser.updateUser(currentUser.username, {
+        token: currentUser.loginToken,
+        user: {
+          name
+        }
+      });
+      $('#profile-alert').text('Profile updated completed!');
+      $('#profile-alert').removeClass('d-none');
+    } catch (err) {
+      $('#profile-alert').text(err);
+      $('#profile-alert').removeClass('d-none');
+    } finally {
+      window.setTimeout(() => $('#profile-alert').addClass('d-none'), 3000)
+    }
 
   });
 

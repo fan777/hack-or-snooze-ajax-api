@@ -164,6 +164,12 @@ class User {
     return existingUser;
   }
 
+  async updateUser(username, updatedUser) {
+    const response = await axios.patch(`${BASE_URL}/users/${username}`, updatedUser);
+    this.name = response.data.user.name;
+    return response.data.user;
+  }
+
   async toggleStoryFavorite(storyNum) {
     let story = this.favorites.find(({ storyId }) => storyId === storyNum);
     if (story) {

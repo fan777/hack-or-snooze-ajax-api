@@ -175,11 +175,9 @@ $(async function () {
       syncCurrentUserToLocalStorage();
       loginAndSubmitForm();
     } catch (err) {
-      $('#login-alert').text(err);
-      $('#login-alert').removeClass('d-none');
-      window.setTimeout(() => $('#login-alert').addClass('d-none'), 3000)
+      $('#login-alert').text(err).addClass('alert-danger').removeClass('d-none');
+      window.setTimeout(() => $('#login-alert').removeClass('alert-danger').addClass('d-none'), 3000);
     }
-
   });
 
   /**
@@ -200,12 +198,9 @@ $(async function () {
       syncCurrentUserToLocalStorage();
       loginAndSubmitForm();
     } catch (err) {
-      $('#signup-alert').text(err);
-      $('#signup-alert').removeClass('d-none');
-      window.setTimeout(() => $('#signup-alert').addClass('d-none'), 3000)
+      $('#signup-alert').text(err).addClass('alert-danger').removeClass('d-none');
+      window.setTimeout(() => $('#signup-alert').removeClass('alert-danger').addClass('d-none'), 3000)
     }
-
-
   });
 
   /**
@@ -223,15 +218,12 @@ $(async function () {
           name
         }
       });
-      $('#profile-alert').text('Profile updated completed!');
-      $('#profile-alert').removeClass('d-none');
+      $('#profile-alert').text('Profile updated completed!').addClass('alert-success').removeClass('d-none');
+      window.setTimeout(() => $('#profile-alert').removeClass('alert-danger').addClass('d-none'), 3000);
     } catch (err) {
-      $('#profile-alert').text(err);
-      $('#profile-alert').removeClass('d-none');
-    } finally {
-      window.setTimeout(() => $('#profile-alert').addClass('d-none'), 3000)
+      $('#profile-alert').text(err).addClass('alert-danger').removeClass('d-none');
+      window.setTimeout(() => $('#profile-alert').removeClass('alert-danger').addClass('d-none'), 3000);
     }
-
   });
 
   /** 
